@@ -1,0 +1,17 @@
+{
+  "name": "glimpse",
+  "version": "0.1.0",
+  "description": "Floating cursor companion for Claude Code using hooks, skills, and a Glimpse daemon.",
+  "author": {
+    "name": "Andres Araujo"
+  },
+  "license": "MIT",
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json",
+  "keywords": [
+    "claude-code",
+    "glimpse",
+    "cursor-companion",
+    "hooks"
+  ]
+}

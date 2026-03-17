@@ -1,0 +1,40 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Node / package managers
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment / local overrides
+.env
+.env.*
+!.env.example
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test / local scratch files
+.tmp/
+tmp/
+*.local
+
+# Coverage / build output
+coverage/
+dist/
+build/
+
+# Runtime noise
+*.pid
+*.sock
+
+# Local planning artifacts
+.pi-plans/
