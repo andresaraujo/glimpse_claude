@@ -4,6 +4,9 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+export const GLIMPSE_INSTALL_COMMAND = 'npm install -g glimpseui';
+export const GLIMPSE_MISSING_MESSAGE = `glimpseui is not installed. Install it with: ${GLIMPSE_INSTALL_COMMAND}`;
+
 function candidateRoots() {
   const roots = [];
   const envRoot = process.env.GLIMPSEUI_ROOT || process.env.GLIMPSE_ROOT;
@@ -21,7 +24,7 @@ function candidateRoots() {
   return roots;
 }
 
-function findModulePath() {
+export function findModulePath() {
   for (const root of candidateRoots()) {
     const direct = join(root, 'src', 'glimpse.mjs');
     if (existsSync(direct)) return direct;
@@ -43,10 +46,14 @@ function findModulePath() {
   return null;
 }
 
+export function isGlimpseInstalled() {
+  return Boolean(findModulePath());
+}
+
 export async function importGlimpse() {
   const modulePath = findModulePath();
   if (!modulePath) {
-    throw new Error('Could not locate glimpseui. Install it globally or set GLIMPSEUI_ROOT.');
+    throw new Error(GLIMPSE_MISSING_MESSAGE);
   }
   return import(pathToFileURL(modulePath).href);
 }

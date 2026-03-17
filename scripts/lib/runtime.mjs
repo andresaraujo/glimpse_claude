@@ -5,17 +5,20 @@ import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { GLIMPSE_INSTALL_COMMAND, GLIMPSE_MISSING_MESSAGE, isGlimpseInstalled } from './glimpse-resolver.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const PLUGIN_ROOT = resolve(__dirname, '..', '..');
 export const RUNTIME_DIR = process.env.CLAUDE_GLIMPSE_HOME || join(homedir(), '.claude', 'glimpse-companion');
 export const SOCKET_PATH = process.env.CLAUDE_GLIMPSE_SOCKET || `/tmp/glimpse-companion-${process.getuid?.() ?? 'user'}.sock`;
 export const PID_FILE = join(RUNTIME_DIR, 'daemon.pid');
+export const DAEMON_LOCK_FILE = join(RUNTIME_DIR, 'daemon.lock');
 export const ENABLED_FILE = join(RUNTIME_DIR, 'enabled.json');
 export const SETTINGS_BACKUP_FILE = join(RUNTIME_DIR, 'statusline.backup.json');
 export const CONFIG_FILE = join(RUNTIME_DIR, 'config.json');
 export const DAEMON_PATH = resolve(PLUGIN_ROOT, 'scripts', 'companion-daemon.mjs');
 export const STATUSLINE_SCRIPT = resolve(PLUGIN_ROOT, 'scripts', 'statusline.sh');
+export { GLIMPSE_INSTALL_COMMAND, GLIMPSE_MISSING_MESSAGE, isGlimpseInstalled };
 
 export function ensureRuntimeDir() {
   mkdirSync(RUNTIME_DIR, { recursive: true });
@@ -32,6 +35,57 @@ export function readJsonFile(path, fallback = null) {
 export function writeJsonFile(path, value) {
   ensureRuntimeDir();
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
+export function readPidFile(path) {
+  try {
+    const text = readFileSync(path, 'utf8').trim();
+    const pid = Number.parseInt(text, 10);
+    return Number.isInteger(pid) && pid > 0 ? pid : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isProcessAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function acquirePidLock(path, pid = process.pid) {
+  ensureRuntimeDir();
+
+  const tryCreate = () => {
+    writeFileSync(path, `${pid}\n`, { encoding: 'utf8', flag: 'wx' });
+    return { acquired: true, pid };
+  };
+
+  try {
+    return tryCreate();
+  } catch (error) {
+    if (error?.code !== 'EEXIST') throw error;
+  }
+
+  const existingPid = readPidFile(path);
+  if (isProcessAlive(existingPid)) {
+    return { acquired: false, pid: existingPid, stale: false };
+  }
+
+  removeFileIfExists(path);
+
+  try {
+    return { ...tryCreate(), stale: true };
+  } catch (error) {
+    if (error?.code === 'EEXIST') {
+      return { acquired: false, pid: readPidFile(path), stale: false };
+    }
+    throw error;
+  }
 }
 
 export function isEnabled() {
@@ -255,6 +309,9 @@ export async function waitForSocket(attempts = 20, delayMs = 150) {
 export async function ensureDaemon() {
   ensureRuntimeDir();
   if (await canConnectSocket()) return true;
+  if (!isGlimpseInstalled()) {
+    throw new Error(GLIMPSE_MISSING_MESSAGE);
+  }
 
   const child = spawn(process.execPath, [DAEMON_PATH], {
     cwd: PLUGIN_ROOT,
@@ -263,7 +320,12 @@ export async function ensureDaemon() {
     env: process.env,
   });
   child.unref();
-  return waitForSocket();
+
+  const ready = await waitForSocket();
+  if (!ready) {
+    throw new Error(`Could not start Glimpse companion daemon. Verify ${GLIMPSE_INSTALL_COMMAND} is installed and try again.`);
+  }
+  return true;
 }
 
 export async function sendMessage(message) {

@@ -13,7 +13,7 @@ A shareable Claude Code plugin that shows a floating Glimpse companion near the 
 ## Limitations
 
 - macOS only
-- Requires `glimpseui` to be installed and resolvable from Node
+- Requires `glimpseui` to be installed and resolvable from Node (`npm install -g glimpseui`)
 - Uses an approximate `working` state instead of exact streaming/thinking detection
 - Installs a status line command in `~/.claude/settings.json` to feed context metadata into the companion
 

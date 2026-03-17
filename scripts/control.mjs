@@ -6,6 +6,8 @@ import process from 'node:process';
 import {
   CONFIG_FILE,
   ENABLED_FILE,
+  GLIMPSE_INSTALL_COMMAND,
+  GLIMPSE_MISSING_MESSAGE,
   PLUGIN_ROOT,
   RUNTIME_DIR,
   SETTINGS_BACKUP_FILE,
@@ -15,6 +17,7 @@ import {
   ensureDaemon,
   ensureRuntimeDir,
   isEnabled,
+  isGlimpseInstalled,
   readConfig,
   readJsonFile,
   removeFileIfExists,
@@ -120,6 +123,8 @@ async function printStatus() {
     statuslineInstalled: statuslineInstalled(settings),
     statuslineCommand: settings?.statusLine?.command || null,
     backupExists: existsSync(SETTINGS_BACKUP_FILE),
+    glimpseuiInstalled: isGlimpseInstalled(),
+    glimpseuiInstallCommand: GLIMPSE_INSTALL_COMMAND,
     config: readConfig(),
     enabledStatePath: ENABLED_FILE,
     configPath: CONFIG_FILE,
@@ -170,6 +175,10 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error.message || String(error));
+  const message = error.message || String(error);
+  console.error(message);
+  if (message.includes('glimpseui') && message !== GLIMPSE_MISSING_MESSAGE) {
+    console.error(GLIMPSE_MISSING_MESSAGE);
+  }
   process.exit(1);
 });

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import process from 'node:process';
 import {
+  GLIMPSE_MISSING_MESSAGE,
   ensureDaemon,
   isEnabled,
   normalizeHookEvent,
@@ -49,6 +50,10 @@ main().catch((error) => {
     process.stdout.write('');
     process.exit(0);
   }
-  console.error(error.message || String(error));
+  const message = error.message || String(error);
+  console.error(message);
+  if (message.includes('glimpseui') && message !== GLIMPSE_MISSING_MESSAGE) {
+    console.error(GLIMPSE_MISSING_MESSAGE);
+  }
   process.exit(1);
 });

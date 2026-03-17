@@ -4,13 +4,20 @@ import { unlinkSync } from 'node:fs';
 import { basename } from 'node:path';
 import process from 'node:process';
 import {
+  DAEMON_LOCK_FILE,
   PID_FILE,
   SOCKET_PATH,
+  acquirePidLock,
   projectNameFromPath,
   removeFileIfExists,
   writePidFile,
 } from './lib/runtime.mjs';
 import { importGlimpse } from './lib/glimpse-resolver.mjs';
+
+const daemonLock = acquirePidLock(DAEMON_LOCK_FILE);
+if (!daemonLock.acquired) {
+  process.exit(0);
+}
 
 const { open } = await importGlimpse();
 
@@ -418,6 +425,7 @@ function cleanup() {
   try { server.close(); } catch {}
   removeFileIfExists(SOCKET_PATH);
   removeFileIfExists(PID_FILE);
+  removeFileIfExists(DAEMON_LOCK_FILE);
   try { win.close(); } catch {}
 }
 
